@@ -1,0 +1,40 @@
+# 매일 자동으로 data.json의 lastSync(D-day 기준일)를 갱신해 커밋하는 워크플로우
+name: Daily D-day Sync
+
+on:
+  schedule:
+    # 매일 한국시간(KST) 오전 8시 = UTC 23시
+    - cron: "0 23 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update lastSync (KST)
+        run: |
+          TODAY=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          echo "Today (KST): $TODAY"
+          node -e "
+            const fs = require('fs');
+            const d = JSON.parse(fs.readFileSync('data.json', 'utf8'));
+            d.lastSync = '$TODAY';
+            fs.writeFileSync('data.json', JSON.stringify(d, null, 2) + '\n');
+          "
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No changes."
+          else
+            git add data.json
+            git commit -m "chore: D-day 자동 갱신 ($(TZ=Asia/Seoul date +%Y-%m-%d))"
+            git push
+          fi

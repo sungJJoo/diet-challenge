@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<!-- 곰·토끼 커플 다이어트 트래커 (익명·감량량 기반, 절대 체중 비노출) + 모바일/PC 기록 UI -->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>💪 곰 ❤️ 토끼 다이어트 챌린지</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg1: #ffd7e6; --bg2: #c8e7ff;
+      --card: rgba(255, 255, 255, 0.82);
+      --ink: #3a2c39; --sub: #8a7a88;
+      --a: #3b82f6; --b: #ec4899; --good: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans KR', sans-serif; color: var(--ink); min-height: 100vh;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2)); background-attachment: fixed;
+      padding: 20px 14px 60px;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    header { text-align: center; margin: 14px 0 8px; }
+    header h1 { font-family: 'Gaegu', sans-serif; font-size: clamp(28px, 7vw, 44px); font-weight: 700; line-height: 1.2; }
+    header p { color: var(--sub); margin-top: 6px; font-size: 14px; }
+
+    .dday { text-align: center; background: var(--card); backdrop-filter: blur(8px); border-radius: 22px; padding: 20px; margin: 16px 0; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .dday .num { font-family: 'Gaegu', sans-serif; font-size: clamp(46px, 14vw, 84px); font-weight: 700; color: #ff5d8f; line-height: 1; }
+    .dday .label { color: var(--sub); font-size: 14px; margin-top: 4px; }
+    .dday .target { font-size: 13px; color: var(--sub); margin-top: 8px; }
+
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 520px) { .cards { grid-template-columns: 1fr; } }
+    .person { background: var(--card); backdrop-filter: blur(8px); border-radius: 22px; padding: 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .person h2 { font-size: 20px; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .stats { display: flex; justify-content: space-around; margin: 14px 0 6px; }
+    .stat { text-align: center; }
+    .stat .v { font-size: 26px; font-weight: 900; font-family: 'Gaegu', sans-serif; }
+    .stat .k { font-size: 11px; color: var(--sub); margin-top: 2px; }
+
+    .bar { height: 14px; border-radius: 999px; background: #00000010; overflow: hidden; margin-top: 8px; }
+    .bar > span { display: block; height: 100%; border-radius: 999px; transition: width 1.2s ease; }
+    .barlabel { font-size: 12px; color: var(--sub); margin-top: 6px; text-align: right; }
+    .remain { font-size: 13px; margin-top: 10px; text-align: center; font-weight: 700; }
+
+    .panel { background: var(--card); backdrop-filter: blur(8px); border-radius: 22px; padding: 18px; margin-top: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .panel h3 { font-size: 16px; margin-bottom: 12px; text-align: center; }
+
+    .logrow { display: flex; gap: 12px; }
+    @media (max-width: 520px) { .logrow { flex-direction: column; gap: 10px; } }
+    .field { flex: 1; }
+    .field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .field input { width: 100%; font-size: 22px; font-family: 'Gaegu', sans-serif; text-align: center; padding: 12px; border: 2px solid #00000012; border-radius: 16px; background: #fff; color: var(--ink); }
+    .field input:focus { outline: none; border-color: #ff8fb3; }
+    .field.a input:focus { border-color: var(--a); }
+    .field.b input:focus { border-color: var(--b); }
+    .hint { font-size: 11px; color: var(--sub); text-align: center; margin-top: 4px; }
+    .datefield { margin-top: 12px; text-align: center; }
+    .datefield input { font-size: 15px; padding: 8px 12px; border: 2px solid #00000012; border-radius: 12px; background: #fff; color: var(--ink); }
+    .savebtn { width: 100%; margin-top: 14px; padding: 15px; font-size: 18px; font-weight: 900; font-family: 'Noto Sans KR', sans-serif; color: #fff; border: none; border-radius: 16px; background: linear-gradient(135deg, #ff5d8f, #8b5cf6); box-shadow: 0 6px 16px rgba(255,93,143,0.35); cursor: pointer; }
+    .savebtn:active { transform: translateY(1px); }
+    .savebtn:disabled { opacity: 0.55; cursor: default; }
+    .msg { text-align: center; font-size: 14px; font-weight: 700; margin-top: 12px; min-height: 20px; }
+    .msg.ok { color: var(--good); }
+    .msg.err { color: #ef4444; }
+
+    .setup { margin-top: 14px; font-size: 13px; }
+    .setup summary { cursor: pointer; color: var(--sub); text-align: center; list-style: none; }
+    .setup summary::-webkit-details-marker { display: none; }
+    .setup .box { margin-top: 12px; padding: 14px; background: #00000008; border-radius: 14px; }
+    .setup ol { margin: 8px 0 12px 18px; line-height: 1.7; }
+    .setup a { color: #ff5d8f; font-weight: 700; }
+    .setup label { display: block; font-weight: 700; margin: 10px 0 4px; }
+    .setup input { width: 100%; padding: 10px; border: 2px solid #00000012; border-radius: 12px; font-size: 13px; background: #fff; color: var(--ink); }
+    .setup button { margin-top: 12px; padding: 10px 16px; border: none; border-radius: 12px; font-weight: 700; background: var(--ink); color: #fff; cursor: pointer; font-size: 13px; }
+    .tokenstate { font-size: 12px; text-align: center; margin-top: 8px; }
+
+    .chartcard canvas { max-height: 280px; }
+    footer { text-align: center; color: var(--sub); font-size: 12px; margin-top: 24px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>💪 곰 ❤️ 토끼<br />다이어트 챌린지</h1>
+      <p>2026년 9월 20일, 우리 둘 다 목표 달성!</p>
+    </header>
+
+    <div class="dday">
+      <div class="num" id="dday">D-?</div>
+      <div class="label">목표일까지 남은 날</div>
+      <div class="target">🎯 목표일 · <span id="targetDate"></span></div>
+    </div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="panel">
+      <h3>✍️ 오늘 몸무게 기록</h3>
+      <div class="logrow">
+        <div class="field a">
+          <label style="color:var(--a)">🐻 곰 (kg)</label>
+          <input id="inA" type="number" inputmode="decimal" step="0.1" placeholder="0.0" />
+        </div>
+        <div class="field b">
+          <label style="color:var(--b)">🐰 토끼 (kg)</label>
+          <input id="inB" type="number" inputmode="decimal" step="0.1" placeholder="0.0" />
+        </div>
+      </div>
+      <div class="hint">지금 잰 몸무게를 그대로 입력하세요 (저장은 감량량만 기록돼요)</div>
+      <div class="datefield"><input id="inDate" type="date" /></div>
+      <button class="savebtn" id="saveBtn">💾 저장하기</button>
+      <div class="msg" id="msg"></div>
+
+      <details class="setup" id="setup">
+        <summary>⚙️ 처음 한 번만 · 기기 연결 설정</summary>
+        <div class="box">
+          <p>이 기기에서 처음 저장하기 전, 아래를 <b>한 번만</b> 설정하세요. (그 다음부터는 숫자만 넣고 저장!)</p>
+          <ol>
+            <li><a href="https://github.com/settings/tokens?type=beta" target="_blank">여기</a>에서 <b>Generate new token</b></li>
+            <li>Repository access → <b>Only select repositories</b> → <b>diet-challenge</b></li>
+            <li>Permissions → <b>Contents</b> → <b>Read and write</b></li>
+            <li>생성된 키(<b>github_pat_…</b>) 복사 → 아래 붙여넣기</li>
+          </ol>
+          <label>연결 키</label>
+          <input id="inToken" type="password" placeholder="github_pat_... 붙여넣기" autocomplete="off" />
+          <label>🐻 곰 시작 몸무게 (kg)</label>
+          <input id="inStartA" type="number" step="0.1" inputmode="decimal" placeholder="예: 75.0" />
+          <label>🐰 토끼 시작 몸무게 (kg)</label>
+          <input id="inStartB" type="number" step="0.1" inputmode="decimal" placeholder="예: 56.0" />
+          <p class="hint" style="margin-top:8px">※ 시작 몸무게·연결 키는 이 기기에만 저장되고 인터넷에 올라가지 않아요.</p>
+          <button id="saveSetup">설정 저장</button>
+          <div class="tokenstate" id="tokenState"></div>
+        </div>
+      </details>
+    </div>
+
+    <div class="panel chartcard">
+      <h3>📉 감량 그래프 (목표 -5.0kg)</h3>
+      <canvas id="chart"></canvas>
+    </div>
+
+    <footer>
+      마지막 갱신: <span id="lastSync">-</span> · 매일 자동 업데이트 by GitHub Actions
+    </footer>
+  </div>
+
+  <script>
+    const REPO = 'sungJJoo/diet-challenge';
+    const BRANCH = 'main';
+    const COLORS = { a: '#3b82f6', b: '#ec4899' };
+    const K_TOKEN = 'diet_gh_token';
+    const K_START = { a: 'diet_start_a', b: 'diet_start_b' };
+
+    const $ = id => document.getElementById(id);
+    const todayKST = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+    const b64enc = str => btoa(unescape(encodeURIComponent(str)));
+    const b64dec = b64 => decodeURIComponent(escape(atob(b64.replace(/\n/g, ''))));
+    const r1 = n => Math.round(n * 10) / 10;
+    const getStart = id => { const v = parseFloat(localStorage.getItem(K_START[id])); return isNaN(v) ? null : v; };
+
+    let chart = null;
+
+    function render(data) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const target = new Date(data.targetDate + 'T00:00:00');
+      const diff = Math.round((target - today) / 86400000);
+      $('dday').textContent = diff > 0 ? 'D-' + diff : (diff === 0 ? 'D-DAY 🎉' : 'D+' + Math.abs(diff));
+      $('targetDate').textContent = data.targetDate.replace(/-/g, '. ');
+      $('lastSync').textContent = data.lastSync || '-';
+
+      const latest = data.records[data.records.length - 1] || {};
+
+      const cards = $('cards');
+      cards.innerHTML = '';
+      data.people.forEach(p => {
+        const lost = latest[p.id] ?? 0;
+        const pct = Math.max(0, Math.min(100, (lost / p.targetLoss) * 100));
+        const remain = r1(p.targetLoss - lost);
+        const reached = lost >= p.targetLoss;
+        const el = document.createElement('div');
+        el.className = 'person';
+        el.innerHTML = `
+          <h2><span class="dot" style="background:${COLORS[p.id]}"></span>${p.name}</h2>
+          <div class="stats">
+            <div class="stat"><div class="v" style="color:${COLORS[p.id]}">-${r1(lost).toFixed(1)}</div><div class="k">지금까지 감량 (kg)</div></div>
+            <div class="stat"><div class="v">-${p.targetLoss.toFixed(1)}</div><div class="k">목표 감량</div></div>
+          </div>
+          <div class="bar"><span style="width:${pct}%; background:${reached ? 'var(--good)' : COLORS[p.id]}"></span></div>
+          <div class="barlabel">진행률 ${pct.toFixed(0)}%</div>
+          <div class="remain" style="color:${reached ? 'var(--good)' : COLORS[p.id]}">
+            ${reached ? '🎉 목표 달성!' : '목표까지 ' + remain.toFixed(1) + ' kg'}
+          </div>`;
+        cards.appendChild(el);
+      });
+
+      // 입력칸 기본값 = (시작 - 최근 감량) = 최근 몸무게. 시작값을 아는 기기에서만 채움
+      data.people.forEach(p => {
+        const input = p.id === 'a' ? $('inA') : $('inB');
+        const start = getStart(p.id);
+        if (!input.value && start != null) input.value = r1(start - (latest[p.id] ?? 0)).toFixed(1);
+      });
+      if (!$('inDate').value) $('inDate').value = todayKST();
+
+      const labels = data.records.map(r => r.date.slice(5));
+      const datasets = data.people.map(p => ({
+        label: p.name, data: data.records.map(r => r[p.id]),
+        borderColor: COLORS[p.id], backgroundColor: COLORS[p.id] + '22',
+        tension: 0.3, pointRadius: 4, fill: true
+      }));
+      datasets.push({
+        label: '목표 -5.0', data: data.records.map(() => data.people[0].targetLoss),
+        borderColor: '#22c55e', borderDash: [6, 5], borderWidth: 1.5, pointRadius: 0, fill: false
+      });
+      if (chart) chart.destroy();
+      chart = new Chart($('chart'), {
+        type: 'line', data: { labels, datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { labels: { font: { family: 'Noto Sans KR' } } } },
+          scales: { y: { title: { display: true, text: '감량 (kg)' }, beginAtZero: true } }
+        }
+      });
+    }
+
+    async function loadData() {
+      const res = await fetch('data.json?v=' + Date.now());
+      return res.json();
+    }
+
+    function refreshState() {
+      const has = !!localStorage.getItem(K_TOKEN);
+      $('tokenState').textContent = has ? '✅ 이 기기는 연결됨' : '⚠️ 아직 연결 안 됨';
+      $('tokenState').style.color = has ? 'var(--good)' : '#ef4444';
+      // 설정칸에 기존값 표시(시작 몸무게만)
+      const sa = localStorage.getItem(K_START.a), sb = localStorage.getItem(K_START.b);
+      if (sa && !$('inStartA').value) $('inStartA').value = sa;
+      if (sb && !$('inStartB').value) $('inStartB').value = sb;
+    }
+
+    function setMsg(text, kind) { const m = $('msg'); m.textContent = text; m.className = 'msg ' + (kind || ''); }
+
+    $('saveSetup').onclick = () => {
+      const t = $('inToken').value.trim();
+      if (t) localStorage.setItem(K_TOKEN, t);
+      const sa = parseFloat($('inStartA').value), sb = parseFloat($('inStartB').value);
+      if (!isNaN(sa)) localStorage.setItem(K_START.a, sa);
+      if (!isNaN(sb)) localStorage.setItem(K_START.b, sb);
+      $('inToken').value = '';
+      refreshState();
+      $('setup').open = false;
+      loadData().then(render);
+      setMsg('설정 완료! 이제 숫자만 넣고 저장하면 돼요 😊', 'ok');
+    };
+
+    $('saveBtn').onclick = async () => {
+      const token = localStorage.getItem(K_TOKEN);
+      const startA = getStart('a'), startB = getStart('b');
+      if (!token || startA == null || startB == null) {
+        setMsg('먼저 아래 ⚙️ 설정에서 이 기기를 연결해 주세요.', 'err');
+        $('setup').open = true;
+        return;
+      }
+      const curA = parseFloat($('inA').value), curB = parseFloat($('inB').value);
+      const date = $('inDate').value || todayKST();
+      if (isNaN(curA) || isNaN(curB)) { setMsg('숫자를 확인해 주세요.', 'err'); return; }
+
+      const btn = $('saveBtn'); btn.disabled = true; setMsg('저장 중… ⏳', '');
+      try {
+        const api = `https://api.github.com/repos/${REPO}/contents/data.json`;
+        const headers = { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' };
+        const cur = await fetch(api + '?ref=' + BRANCH + '&v=' + Date.now(), { headers });
+        if (!cur.ok) throw new Error('연결 키가 올바르지 않거나 권한이 부족해요 (' + cur.status + ')');
+        const curJson = await cur.json();
+        const data = JSON.parse(b64dec(curJson.content));
+
+        const rec = { date, a: r1(startA - curA), b: r1(startB - curB) };
+        const idx = data.records.findIndex(r => r.date === date);
+        if (idx >= 0) data.records[idx] = rec; else data.records.push(rec);
+        data.records.sort((x, y) => x.date.localeCompare(y.date));
+        data.lastSync = todayKST();
+
+        const put = await fetch(api, {
+          method: 'PUT', headers,
+          body: JSON.stringify({
+            message: `기록: ${date}`,
+            content: b64enc(JSON.stringify(data, null, 2) + '\n'),
+            sha: curJson.sha, branch: BRANCH
+          })
+        });
+        if (!put.ok) throw new Error('저장 실패 (' + put.status + ')');
+
+        render(data);
+        setMsg('저장 완료! 🎉 그래프가 갱신됐어요.', 'ok');
+      } catch (e) {
+        setMsg('❌ ' + e.message, 'err');
+      } finally { btn.disabled = false; }
+    };
+
+    refreshState();
+    loadData().then(render).catch(e => { $('dday').textContent = '로드 실패'; console.error(e); });
+  </script>
+</body>
+</html>

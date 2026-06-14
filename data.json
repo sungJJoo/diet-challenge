@@ -1,0 +1,11 @@
+{
+  "targetDate": "2026-09-20",
+  "people": [
+    { "id": "a", "name": "🐻 곰", "targetLoss": 5.0 },
+    { "id": "b", "name": "🐰 토끼", "targetLoss": 5.0 }
+  ],
+  "records": [
+    { "date": "2026-06-14", "a": 0.0, "b": 0.0 }
+  ],
+  "lastSync": "2026-06-14"
+}
